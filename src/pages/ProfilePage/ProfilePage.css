@@ -1,0 +1,29 @@
+.profile-card {
+  background-color: #FFFFFF;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+}
+
+.profile-card h2 {
+  color: #660000;
+  margin-bottom: 20px;
+}
+
+.profile-card p {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.history-list {
+  list-style: none;
+}
+
+.history-item {
+  background-color: #FFFFFF;
+  padding: 15px;
+  border-left: 4px solid #660000;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
