@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
 import type { Tournament, AppUser } from '../../types'
@@ -17,22 +18,31 @@ export default function OrganizerDashboard() {
 
     useEffect(() => { fetchMyTournaments() }, [])
 
-    const handleCreate = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        const user: AppUser = JSON.parse(localStorage.getItem('user')!)
-        const form = e.currentTarget
 
-        await supabase.from('tournaments').insert([{
-            title: (form.elements.namedItem('title') as HTMLInputElement).value,
-            city: (form.elements.namedItem('city') as HTMLInputElement).value,
-            start_date: (form.elements.namedItem('start_date') as HTMLInputElement).value,
-            start_time: (form.elements.namedItem('start_time') as HTMLInputElement).value,
-            end_datetime: (form.elements.namedItem('end_datetime') as HTMLInputElement).value,
-            time_control: (form.elements.namedItem('time_control') as HTMLSelectElement).value,
-            total_spots: parseInt((form.elements.namedItem('total_spots') as HTMLInputElement).value),
-            total_rounds: parseInt((form.elements.namedItem('total_rounds') as HTMLInputElement).value),
+        const userString = localStorage.getItem('user')
+        if (!userString) return
+        const user: AppUser = JSON.parse(userString)
+
+        const formData = new FormData(e.currentTarget)
+
+        const { error } = await supabase.from('tournaments').insert([{
+            title: formData.get('title'),
+            city: formData.get('city'),
+            start_datetime: formData.get('start_datetime'),
+            end_datetime: formData.get('end_datetime'),
+            time_control: formData.get('time_control'),
+            total_spots: parseInt(formData.get('total_spots') as string),
+            total_rounds: parseInt(formData.get('total_rounds') as string),
             organizer_id: user.id
         }])
+
+        if (error) {
+            alert('Ошибка при создании: ' + error.message)
+            return
+        }
+
         setShowModal(false)
         fetchMyTournaments()
     }
@@ -62,16 +72,15 @@ export default function OrganizerDashboard() {
                             <input name="title" placeholder="Название турнира" required />
                             <input name="city" placeholder="Город" required />
                             <div className="form-grid">
-                                <input name="start_date" type="date" required title="Дата начала" />
-                                <input name="start_time" type="time" required title="Время начала" />
+                                <input name="start_datetime" type="datetime-local" required title="Дата и время начала" />
                                 <input name="end_datetime" type="datetime-local" required title="Дата и время окончания" />
                                 <select name="time_control" required>
                                     <option value="блиц">Блиц</option>
                                     <option value="рапид">Рапид</option>
                                     <option value="классика">Классика</option>
                                 </select>
-                                <input name="total_spots" type="number" placeholder="Всего мест" required />
-                                <input name="total_rounds" type="number" placeholder="Количество туров" required />
+                                <input name="total_spots" type="number" placeholder="Всего мест" required min="2" />
+                                <input name="total_rounds" type="number" placeholder="Количество туров" required min="1" />
                             </div>
                             <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
                                 <button type="submit" className="btn-primary">Сохранить</button>

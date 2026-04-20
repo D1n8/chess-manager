@@ -6,10 +6,19 @@ import './PlayerDashboard.css'
 
 export default function PlayerDashboard() {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const [appliedTournamentIds, setAppliedTournamentIds] = useState<Set<string>>(new Set())
   const navigate = useNavigate()
 
   useEffect(() => {
-    supabase.from('tournaments').select('*').then(({ data }) => setTournaments(data || []))
+    const fetchDash = async () => {
+      const user: AppUser = JSON.parse(localStorage.getItem('user')!)
+      const { data: tData } = await supabase.from('tournaments').select('*')
+      const { data: pData } = await supabase.from('participants').select('tournament_id').eq('player_id', user.id)
+
+      setTournaments(tData || [])
+      if (pData) setAppliedTournamentIds(new Set(pData.map(p => p.tournament_id)))
+    }
+    fetchDash()
   }, [])
 
   const handleApply = async (tId: string) => {
@@ -28,11 +37,15 @@ export default function PlayerDashboard() {
             <h3>{t.title}</h3>
             <p><strong>Город:</strong> {t.city}</p>
             <p><strong>Формат:</strong> {t.time_control}</p>
-            <p><strong>Начало:</strong> {t.start_date} в {t.start_time}</p>
+            <p><strong>Начало:</strong> {t.start_date} в {t.start_date}</p>
             <p><strong>Места:</strong> {t.total_spots}</p>
             <div className="card-actions">
-              <button className="btn-primary" onClick={() => handleApply(t.id)}>Подать заявку</button>
-              <button className="btn-primary" style={{backgroundColor: '#000'}} onClick={() => navigate(`/tournaments/${t.id}`)}>Сетка</button>
+              {!appliedTournamentIds.has(t.id) ? (
+                <button className="btn-primary" onClick={() => handleApply(t.id)}>Подать заявку</button>
+              ) : (
+                <span style={{ color: '#2e8b57', fontWeight: 'bold' }}>Вы в списке</span>
+              )}
+              <button className="btn-primary" style={{ backgroundColor: '#000' }} onClick={() => navigate(`/tournaments/${t.id}`)}>Сетка</button>
             </div>
           </div>
         ))}
