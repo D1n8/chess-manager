@@ -264,22 +264,50 @@ export default function OrganizerManage() {
             <h2 style={{ color: '#660000' }}>Управление участниками</h2>
             {currentRound === 0 && <button className="btn-primary" onClick={() => setShowAddModal(true)}>+ Добавить участника</button>}
           </div>
-          {currentRound > 0 && <p style={{ color: 'gray', marginTop: 10 }}>* Регистрация закрыта, турнир начался.</p>}
-          <table>
-            <thead><tr><th>ФИО</th><th>Рейтинг</th><th>Статус</th><th>Действия</th></tr></thead>
-            <tbody>
-              {participants.map(p => (
-                <tr key={p.id}>
-                  <td>{p.app_users?.full_name}</td><td>{p.app_users?.rating}</td>
-                  <td><span className={`badge ${p.status === 'pending' ? 'bg-pending' : 'bg-confirmed'}`}>{p.status === 'pending' ? 'Ожидает' : 'Принят'}</span></td>
-                  <td className="actions-cell">
-                    {p.status === 'pending' && currentRound === 0 && <button className="btn-success" onClick={() => confirmPlayer(p.id)}>Принять</button>}
-                    {currentRound === 0 && <button className="btn-danger" onClick={() => removePlayer(p.id)}>{p.status === 'pending' ? 'Отклонить' : 'Удалить'}</button>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+          {currentRound > 0 && (
+            <p style={{ color: '#660000', marginTop: 10, fontWeight: 'bold' }}>
+              * Регистрация закрыта, так как турнир уже начался.
+            </p>
+          )}
+
+          {/* НОВЫЙ СПИСОК ВМЕСТО ТАБЛИЦЫ */}
+          <div className="participant-list">
+            {participants.length === 0 ? (
+              <p style={{ marginTop: '10px' }}>Участников пока нет.</p>
+            ) : (
+              participants.map(p => (
+                <div key={p.id} className="participant-row">
+
+                  {/* Левая часть: ФИО и Рейтинг */}
+                  <div className="participant-info">
+                    <span className="participant-name">{p.app_users?.full_name}</span>
+                    <span className="participant-rating">Рейтинг ФИДЕ/ФШР: <strong>{p.app_users?.rating}</strong></span>
+                  </div>
+
+                  {/* Правая часть: Статус и Кнопки (без заголовков) */}
+                  <div className="participant-controls">
+
+                    <span className={`badge ${p.status === 'pending' ? 'bg-pending' : 'bg-confirmed'}`}>
+                      {p.status === 'pending' ? 'Ожидает' : 'Принят'}
+                    </span>
+
+                    <div className="actions-cell">
+                      {p.status === 'pending' && currentRound === 0 && (
+                        <button className="btn-success" onClick={() => confirmPlayer(p.id)}>Принять</button>
+                      )}
+                      {currentRound === 0 && (
+                        <button className="btn-danger" onClick={() => removePlayer(p.id)}>
+                          {p.status === 'pending' ? 'Отклонить' : 'Удалить'}
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 

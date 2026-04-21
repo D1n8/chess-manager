@@ -38,13 +38,6 @@ th {
     font-weight: bold;
 }
 
-.badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    color: #fff;
-}
-
 .bg-pending {
     background-color: #ffa500;
 }
@@ -116,4 +109,56 @@ th {
 .divider {
     margin: 20px 0;
     border-top: 1px solid #ccc;
+}
+
+/* Новые стили для списка участников (вместо таблицы) */
+.participant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.participant-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #FFFFFF; /* Белая карточка на бежевом фоне */
+  padding: 15px 20px;
+  border-radius: 6px;
+  border-left: 5px solid #660000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.participant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.participant-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #000000;
+}
+
+.participant-rating {
+  font-size: 14px;
+  color: #555555;
+}
+
+.participant-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* Расстояние между статусом и кнопками */
+}
+
+/* Фиксируем ширину бейджа, чтобы кнопки не прыгали */
+.badge {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #fff;
+  text-align: center;
+  min-width: 80px; 
 }
