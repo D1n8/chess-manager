@@ -19,6 +19,7 @@ export interface Tournament {
   total_rounds: number;
   status: string;
   confirmed_count?: number;
+  has_applied?: boolean;
 }
 
 export interface Participant {
