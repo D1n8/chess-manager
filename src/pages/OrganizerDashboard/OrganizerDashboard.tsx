@@ -8,12 +8,15 @@ import './OrganizerDashboard.css'
 export default function OrganizerDashboard() {
     const [tournaments, setTournaments] = useState<Tournament[]>([])
     const [showModal, setShowModal] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const navigate = useNavigate()
 
     const fetchMyTournaments = async () => {
+        setIsLoading(true)
         const user: AppUser = JSON.parse(localStorage.getItem('user')!)
         const { data } = await supabase.from('tournaments').select('*').eq('organizer_id', user.id)
         setTournaments(data || [])
+        setIsLoading(false)
     }
 
     useEffect(() => { fetchMyTournaments() }, [])
@@ -45,6 +48,10 @@ export default function OrganizerDashboard() {
 
         setShowModal(false)
         fetchMyTournaments()
+    }
+
+    if (isLoading) {
+        return <div className="container"><div className="loader-container"><div className="spinner"></div></div></div>
     }
 
     return (

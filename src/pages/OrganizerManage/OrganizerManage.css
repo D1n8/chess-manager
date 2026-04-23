@@ -92,6 +92,7 @@ th {
 
 .search-box {
     display: flex;
+    align-items: start;
     gap: 10px;
     margin-bottom: 20px;
 }

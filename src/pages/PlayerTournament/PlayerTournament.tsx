@@ -8,11 +8,12 @@ export default function PlayerTournament() {
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [matches, setMatches] = useState<Match[]>([])
-
+  const [isLoading, setIsLoading] = useState(true)
   const [tab, setTab] = useState<'participants' | 'matches' | 'standings'>('participants')
   const [activeRound, setActiveRound] = useState<number>(1)
 
   const fetchData = async (tournamentId: string) => {
+    setIsLoading(true)
     const { data: tData } = await supabase.from('tournaments').select('*').eq('id', tournamentId).single()
     // Загружаем только подтвержденных участников
     const { data: pData } = await supabase.from('participants').select('*, app_users(full_name, rating)').eq('tournament_id', tournamentId).eq('status', 'confirmed')
@@ -27,6 +28,8 @@ export default function PlayerTournament() {
       setActiveRound(maxR)
       setTab('matches') // Если турнир начался, сразу открываем жеребьевку
     }
+
+    setIsLoading(false)
   }
 
   useEffect(() => {
@@ -68,6 +71,10 @@ export default function PlayerTournament() {
     })
 
     return Object.values(scores).sort((a, b) => b.points - a.points || b.rating - a.rating)
+  }
+
+  if (isLoading) {
+    return <div className="container"><div className="loader-container"><div className="spinner"></div></div></div>
   }
 
   if (!tournament) return <div className="container">Загрузка...</div>

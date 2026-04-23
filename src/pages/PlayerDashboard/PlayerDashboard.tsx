@@ -6,7 +6,7 @@ import './PlayerDashboard.css'
 
 export default function PlayerDashboard() {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
-
+  const [isLoading, setIsLoading] = useState(true)
   // Состояния фильтров
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCity, setFilterCity] = useState('')
@@ -17,6 +17,7 @@ export default function PlayerDashboard() {
   const navigate = useNavigate()
 
   const fetchTournaments = async () => {
+    setIsLoading(true)
     const userString = localStorage.getItem('user')
     if (!userString) return
     const user: AppUser = JSON.parse(userString)
@@ -51,6 +52,8 @@ export default function PlayerDashboard() {
 
       setTournaments(enrichedTournaments)
     }
+
+    setIsLoading(false)
   }
 
   useEffect(() => {
@@ -95,6 +98,10 @@ export default function PlayerDashboard() {
       dateStyle: 'short',
       timeStyle: 'short'
     })
+  }
+
+  if (isLoading) {
+    return <div className="container"><div className="loader-container"><div className="spinner"></div></div></div>
   }
 
   return (
