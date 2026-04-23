@@ -11,7 +11,7 @@ export default function OrganizerManage() {
   const [matches, setMatches] = useState<Match[]>([])
   const [tab, setTab] = useState<'participants' | 'matches' | 'standings' | 'settings'>('participants')
   const [activeRound, setActiveRound] = useState<number>(1)
-
+  const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [foundPlayers, setFoundPlayers] = useState<AppUser[]>([])
@@ -19,6 +19,7 @@ export default function OrganizerManage() {
   const [generatedCredentials, setGeneratedCredentials] = useState<{ email: string, password: string } | null>(null)
 
   const fetchData = async () => {
+    setIsLoading(true)
     const { data: tData } = await supabase.from('tournaments').select('*').eq('id', id).single()
     const { data: pData } = await supabase.from('participants').select('*, app_users(full_name, rating)').eq('tournament_id', id)
     const { data: mData } = await supabase.from('matches').select('*').eq('tournament_id', id)
@@ -31,6 +32,8 @@ export default function OrganizerManage() {
       const maxR = Math.max(...mData.map((m: Match) => m.round_number))
       setActiveRound(maxR)
     }
+
+    setIsLoading(false)
   }
 
   useEffect(() => { if (id) fetchData() }, [id])
@@ -247,7 +250,9 @@ export default function OrganizerManage() {
     setShowAddModal(false); setGeneratedCredentials(null); setSearchQuery(''); setFoundPlayers([])
   }
 
-  if (!tournament) return <div className="container">Загрузка...</div>
+  if (isLoading || !tournament) {
+    return <div className="container"><div className="loader-container"><div className="spinner"></div></div></div>
+}
 
   return (
     <div className="container">
