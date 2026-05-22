@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabaseClient'
 import type { AppUser, Tournament } from '../../types'
+import { useNavigate } from 'react-router-dom'
 import './ProfilePage.css'
 
 // Вспомогательный интерфейс для истории (Связка турнира и статуса заявки)
@@ -50,12 +51,14 @@ export default function ProfilePage({ onLogout }: { onLogout: () => void }) {
         else setIsLoading(false)
     }, [])
 
+    const navigate = useNavigate() 
+
     const handleLogout = () => {
         localStorage.removeItem('user')
-        onLogout()
+        onLogout() 
+        navigate('/')
     }
 
-    // Красивое форматирование даты
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('ru-RU', {
             day: 'numeric', month: 'long', year: 'numeric'

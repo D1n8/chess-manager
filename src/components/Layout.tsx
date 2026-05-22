@@ -18,7 +18,7 @@ export default function Layout() {
           <div className="logo">ChessManager</div>
           <nav className="nav-links">
             <Link to={getDashboardLink()}>Турниры</Link>
-            <Link to="#">Мировой рейтинг</Link>
+            <Link to="https://www.chessbase.ru/player/" target='_blank'>Мировой рейтинг</Link>
           </nav>
         </div>
         <button className="btn-profile" onClick={() => navigate('/profile')}>

@@ -2,19 +2,25 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
 import type { Tournament, AppUser } from '../../types'
+import { useToast } from '../../components/ToastContext'
 import './PlayerDashboard.css'
 
 export default function PlayerDashboard() {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const { showToast } = useToast()
+  
   // Состояния фильтров
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCity, setFilterCity] = useState('')
   const [filterFormat, setFilterFormat] = useState('')
-  const [filterDateFrom, setFilterDateFrom] = useState('') // Начало диапазона
-  const [filterDateTo, setFilterDateTo] = useState('')     // Конец диапазона
+  const [filterDate, setFilterDate] = useState('')
 
   const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchTournaments()
+  }, [])
 
   const fetchTournaments = async () => {
     setIsLoading(true)
@@ -24,12 +30,12 @@ export default function PlayerDashboard() {
 
     // 1. Получаем все турниры
     const { data: tData } = await supabase.from('tournaments').select('*')
-
+    
     // 2. Получаем всех ПОДТВЕРЖДЕННЫХ участников для подсчета свободных мест
     const { data: pData } = await supabase.from('participants').select('tournament_id').eq('status', 'confirmed')
-
-    // 3. Получаем ВСЕ заявки ТЕКУЩЕГО ИГРОКА (и pending, и confirmed), чтобы заблокировать кнопку
-    const { data: myApps } = await supabase.from('participants').select('tournament_id').eq('player_id', user.id)
+    
+    // 3. Получаем заявки ТЕКУЩЕГО ИГРОКА, чтобы заблокировать кнопку и иметь ID для отзыва
+    const { data: myApps } = await supabase.from('participants').select('id, tournament_id').eq('player_id', user.id)
 
     if (tData) {
       // Считаем занятые места
@@ -40,25 +46,21 @@ export default function PlayerDashboard() {
         })
       }
 
-      // Создаем Set (список) из ID турниров, куда мы уже подали заявку
-      const appliedSet = new Set(myApps?.map(a => a.tournament_id) || [])
+      // Создаем Map (ID турнира -> ID заявки), чтобы знать, на что мы подали заявку
+      const appliedMap = new Map(myApps?.map(a => [a.tournament_id, a.id]) || [])
 
       // Обогащаем турниры новыми полями
       const enrichedTournaments = tData.map(t => ({
         ...t,
         confirmed_count: counts[t.id] || 0,
-        has_applied: appliedSet.has(t.id) // true, если игрок уже подал заявку
+        has_applied: appliedMap.has(t.id),
+        participant_id: appliedMap.get(t.id) // ID нашей заявки для возможности её удалить
       }))
-
+      
       setTournaments(enrichedTournaments)
     }
-
     setIsLoading(false)
   }
-
-  useEffect(() => {
-    fetchTournaments()
-  }, [])
 
   const handleApply = async (tId: string) => {
     const userString = localStorage.getItem('user')
@@ -66,12 +68,26 @@ export default function PlayerDashboard() {
     const user: AppUser = JSON.parse(userString)
 
     const { error } = await supabase.from('participants').insert([{ tournament_id: tId, player_id: user.id }])
-
+    
     if (error) {
-      alert('Ошибка при подаче заявки!')
+      showToast('Ошибка при подаче заявки!', 'error')
     } else {
-      alert('Заявка успешно отправлена организатору!')
-      fetchTournaments() // Сразу обновляем список, чтобы кнопка заблокировалась
+      showToast('Заявка успешно отправлена организатору!')
+      fetchTournaments() // Обновляем список
+    }
+  }
+
+  // --- НОВАЯ ФУНКЦИЯ: Отозвать заявку ---
+  const handleWithdraw = async (participantId: string | undefined) => {
+    if (!participantId) return
+    
+    const { error } = await supabase.from('participants').delete().eq('id', participantId)
+    
+    if (error) {
+      showToast('Ошибка при отмене заявки', 'error')
+    } else {
+      showToast('Ваша заявка отозвана')
+      fetchTournaments() // Обновляем список
     }
   }
 
@@ -80,23 +96,17 @@ export default function PlayerDashboard() {
     const matchSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase())
     const matchCity = filterCity === '' || t.city === filterCity
     const matchFormat = filterFormat === '' || t.time_control === filterFormat
+    const matchDate = filterDate === '' || new Date(t.start_datetime) >= new Date(filterDate)
 
-    // Фильтр диапазона дат начала турнира
-    const tDate = new Date(t.start_datetime)
-    const matchDateFrom = filterDateFrom === '' || tDate >= new Date(filterDateFrom)
-    const matchDateTo = filterDateTo === '' || tDate <= new Date(filterDateTo + 'T23:59:59')
-
-    return matchSearch && matchCity && matchFormat && matchDateFrom && matchDateTo
+    return matchSearch && matchCity && matchFormat && matchDate
   })
 
-  // Уникальные города для селекта
   const uniqueCities = Array.from(new Set(tournaments.map(t => t.city)))
 
-  // Форматирование даты
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ru-RU', {
-      dateStyle: 'short',
-      timeStyle: 'short'
+    return new Date(dateString).toLocaleString('ru-RU', { 
+      dateStyle: 'short', 
+      timeStyle: 'short' 
     })
   }
 
@@ -106,18 +116,18 @@ export default function PlayerDashboard() {
 
   return (
     <div className="container">
-      <h2 style={{ color: '#660000' }}>Поиск турниров</h2>
-
+      <h2 style={{color: '#660000'}}>Поиск турниров</h2>
+      
       {/* ПАНЕЛЬ ФИЛЬТРОВ */}
       <div className="filters-container">
-        <input
-          type="text"
-          placeholder="Поиск по названию..."
+        <input 
+          type="text" 
+          placeholder="Поиск по названию..." 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ flex: '2' }}
+          style={{flex: '2'}}
         />
-
+        
         <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)}>
           <option value="">Все города</option>
           {uniqueCities.map(city => (
@@ -132,25 +142,12 @@ export default function PlayerDashboard() {
           <option value="классика">Классика</option>
         </select>
 
-        {/* Блок фильтрации по диапазону дат */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: '100%' }}>
-          <span style={{ fontWeight: 'bold', color: '#660000', fontSize: '14px' }}>Даты начала турнира:</span>
-          <input
-            type="date"
-            title="Начало диапазона"
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-            style={{ flex: 1, minWidth: '130px' }}
-          />
-          <span style={{ color: '#660000' }}>—</span>
-          <input
-            type="date"
-            title="Конец диапазона"
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-            style={{ flex: 1, minWidth: '130px' }}
-          />
-        </div>
+        <input 
+          type="date" 
+          title="Начиная с даты" 
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+        />
       </div>
 
       {/* КАРТОЧКИ ТУРНИРОВ */}
@@ -160,12 +157,7 @@ export default function PlayerDashboard() {
         <div className="grid">
           {filteredTournaments.map(t => {
             const availableSpots = t.total_spots - (t.confirmed_count || 0)
-
-            // Логика блокировки и текста кнопки
-            const isButtonDisabled = t.has_applied || availableSpots <= 0
-            let buttonText = 'Подать заявку'
-            if (t.has_applied) buttonText = 'Заявка подана'
-            else if (availableSpots <= 0) buttonText = 'Мест нет'
+            const tournamentStarted = new Date() > new Date(t.start_datetime) // Проверка: начался ли турнир
 
             return (
               <div key={t.id} className="card">
@@ -174,7 +166,7 @@ export default function PlayerDashboard() {
                 <p><strong>Формат:</strong> {t.time_control}</p>
                 <p><strong>Начало:</strong> {formatDate(t.start_datetime)}</p>
                 <p><strong>Окончание:</strong> {formatDate(t.end_datetime)}</p>
-
+                
                 <p>
                   <strong>Свободных мест:</strong>{' '}
                   <span style={{ color: availableSpots > 0 ? '#2e8b57' : '#cc0000', fontWeight: 'bold' }}>
@@ -183,24 +175,40 @@ export default function PlayerDashboard() {
                 </p>
 
                 <div className="card-actions">
-                  <button
-                    className="btn-primary"
-                    onClick={() => handleApply(t.id)}
-                    disabled={isButtonDisabled}
-                    style={{
-                      opacity: isButtonDisabled ? 0.5 : 1,
-                      cursor: isButtonDisabled ? 'not-allowed' : 'pointer',
-                      backgroundColor: t.has_applied ? '#2e8b57' : '#660000' // Если подана, красим в зеленый
-                    }}
-                  >
-                    {buttonText}
-                  </button>
-                  <button
-                    className="btn-primary"
-                    style={{ backgroundColor: '#000' }}
+                  {t.has_applied ? (
+                    // Если заявка подана и турнир еще не начался, даем возможность её отозвать
+                    !tournamentStarted ? (
+                      <button 
+                        className="btn-primary" 
+                        style={{backgroundColor: '#cc0000'}} 
+                        onClick={() => handleWithdraw(t.participant_id)}
+                      >
+                        Отозвать заявку
+                      </button>
+                    ) : (
+                       // Если турнир уже идет, просто показываем бейдж
+                       <button className="btn-primary" disabled style={{backgroundColor: '#2e8b57', opacity: 0.8}}>
+                         В турнире
+                       </button>
+                    )
+                  ) : (
+                    // Если заявка не подана
+                    <button 
+                      className="btn-primary" 
+                      onClick={() => handleApply(t.id)}
+                      disabled={availableSpots <= 0}
+                      style={{ opacity: availableSpots <= 0 ? 0.5 : 1, cursor: availableSpots <= 0 ? 'not-allowed' : 'pointer' }}
+                    >
+                      Подать заявку
+                    </button>
+                  )}
+                  
+                  <button 
+                    className="btn-primary" 
+                    style={{backgroundColor: '#000'}} 
                     onClick={() => navigate(`/tournaments/${t.id}`)}
                   >
-                    Подробнее
+                    Сетка
                   </button>
                 </div>
               </div>

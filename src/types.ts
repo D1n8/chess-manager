@@ -20,6 +20,7 @@ export interface Tournament {
   status: string;
   confirmed_count?: number;
   has_applied?: boolean;
+  participant_id?: string;
 }
 
 export interface Participant {
